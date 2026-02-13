@@ -1,8 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 
-/** Root route: redirect to dashboard if logged in, otherwise to login */
-const Index = () => {
+/** Redirects unauthenticated users to the login page */
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -13,7 +13,9 @@ const Index = () => {
     );
   }
 
-  return <Navigate to={user ? "/dashboard" : "/login"} replace />;
+  if (!user) return <Navigate to="/login" replace />;
+
+  return <>{children}</>;
 };
 
-export default Index;
+export default ProtectedRoute;
