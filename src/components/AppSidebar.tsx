@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import {
   Sidebar,
   SidebarContent,
@@ -66,18 +67,23 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border p-4">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name}</p>
-            <p className="truncate text-xs text-sidebar-muted-foreground">{user?.email}</p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-medium text-sidebar-foreground">{user?.name}</p>
+              <p className="truncate text-xs text-sidebar-muted-foreground">{user?.email}</p>
+            </div>
+            <button
+              onClick={logout}
+              className="rounded-lg p-2 text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
+              title="Logout"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
           </div>
-          <button
-            onClick={logout}
-            className="rounded-lg p-2 text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
+          <div className="flex justify-center">
+            <ThemeToggle />
+          </div>
         </div>
       </SidebarFooter>
     </Sidebar>
