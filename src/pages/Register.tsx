@@ -36,6 +36,12 @@ const Register = () => {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="w-full max-w-md space-y-8">
+        {/* Back to Home */}
+        <div className="text-center">
+          <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors mb-4">
+            ← Back to Home
+          </Link>
+        </div>
         <div className="text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary">
             <Brain className="h-7 w-7 text-primary-foreground" />

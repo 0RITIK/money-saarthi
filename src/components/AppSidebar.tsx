@@ -4,6 +4,7 @@ import {
   TrendingDown,
   Brain,
   LogOut,
+  Home,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/sidebar";
 
 const navItems = [
+  { title: "Home", url: "/", icon: Home },
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Add Income", url: "/add-income", icon: TrendingUp },
   { title: "Add Expense", url: "/add-expense", icon: TrendingDown },
