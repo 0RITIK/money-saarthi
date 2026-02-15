@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import Landing from "./Landing";
 
-/** Root route: redirect to dashboard if logged in, otherwise to login */
+/** Root route: show landing page for visitors, redirect to dashboard if logged in */
 const Index = () => {
   const { user, loading } = useAuth();
 
@@ -13,7 +14,11 @@ const Index = () => {
     );
   }
 
-  return <Navigate to={user ? "/dashboard" : "/login"} replace />;
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return <Landing />;
 };
 
 export default Index;
