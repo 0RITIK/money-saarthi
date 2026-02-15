@@ -7,7 +7,7 @@ import { FinalCTA } from "@/components/landing/FinalCTA";
 
 const Landing = () => {
   return (
-    <div className="bg-[#050816] min-h-screen overflow-x-hidden">
+    <div className="bg-[#050816] min-h-screen overflow-x-hidden scroll-smooth">
       <LandingNavbar />
       <HeroSection />
       <HowItWorks />
