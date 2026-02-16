@@ -43,7 +43,7 @@ const Login = () => {
             <Brain className="h-7 w-7 text-primary-foreground" />
           </div>
           <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to your AI Personal CFO</p>
+          <p className="mt-1 text-sm text-muted-foreground">Sign in to Money Saarthi</p>
         </div>
 
         {/* Form */}
