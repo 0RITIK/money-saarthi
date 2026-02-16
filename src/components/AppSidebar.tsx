@@ -38,7 +38,7 @@ export function AppSidebar() {
           <Brain className="h-5 w-5 text-sidebar-primary-foreground" />
         </div>
         <div>
-          <h2 className="text-sm font-bold text-sidebar-foreground">AI Personal CFO</h2>
+          <h2 className="text-sm font-bold text-sidebar-foreground">Money Saarthi</h2>
           <p className="text-xs text-sidebar-muted-foreground">Smart Finance</p>
         </div>
       </div>

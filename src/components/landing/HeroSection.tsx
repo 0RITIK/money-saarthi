@@ -56,7 +56,7 @@ export function HeroSection() {
             transition={{ duration: 0.6, delay: 0.3 }}
             className="text-lg text-gray-400 max-w-lg leading-relaxed"
           >
-            AI Personal CFO analyzes, predicts, and optimizes your money —
+            Money Saarthi analyzes, predicts, and optimizes your money —
             automatically. Take control with intelligent insights.
           </motion.p>
 

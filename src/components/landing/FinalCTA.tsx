@@ -61,7 +61,7 @@ export function FinalCTA() {
       {/* Footer */}
       <div className="relative z-10 mt-20 border-t border-white/5 pt-8 text-center">
         <p className="text-gray-600 text-sm">
-          © 2025 AI Personal CFO · Academic Project
+          © 2025 Money Saarthi · Academic Project
         </p>
       </div>
     </section>

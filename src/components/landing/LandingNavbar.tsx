@@ -39,7 +39,7 @@ export function LandingNavbar() {
             <div className="absolute inset-0 blur-lg bg-cyan-400/30 rounded-full" />
           </div>
           <span className="text-lg font-bold bg-gradient-to-r from-cyan-300 to-violet-400 bg-clip-text text-transparent">
-            AI Personal CFO
+            Money Saarthi
           </span>
         </Link>
 
