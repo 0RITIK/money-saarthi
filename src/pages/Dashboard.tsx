@@ -1,224 +1,140 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { incomeApi, expenseApi, type Income, type Expense } from "@/services/api";
 import {
-  incomeApi,
-  expenseApi,
-  insightsApi,
-  type Income,
-  type Expense,
-  type AIInsight,
-} from "@/services/api";
+  getMonthlyAggregates,
+  getCategorySummaries,
+  getYearlySummary,
+  getFinancialHealthScore,
+  getCurrentMonthStats,
+  getPredictions,
+  getStackedCategoryData,
+} from "@/services/analytics";
+import { generateInsights } from "@/services/insights";
 import DashboardLayout from "@/components/DashboardLayout";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DollarSign,
-  TrendingDown,
-  TrendingUp,
-  Percent,
-  Brain,
-  AlertTriangle,
-  CheckCircle2,
-  Info,
-  XCircle,
-} from "lucide-react";
-import {
-  PieChart,
-  Pie,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-} from "recharts";
+import AnimatedStatCards from "@/components/dashboard/AnimatedStatCards";
+import FloatingParticles from "@/components/dashboard/FloatingParticles";
 
-// Chart colors matching our design tokens
-const COLORS = [
-  "hsl(173, 58%, 39%)",
-  "hsl(199, 89%, 48%)",
-  "hsl(262, 52%, 47%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(152, 60%, 40%)",
-];
+// Lazy load heavy chart components
+const MonthlyComparisonChart = lazy(() => import("@/components/dashboard/MonthlyComparisonChart"));
+const SavingsTrendChart = lazy(() => import("@/components/dashboard/SavingsTrendChart"));
+const CategoryBreakdownChart = lazy(() => import("@/components/dashboard/CategoryBreakdownChart"));
+const HorizontalCategoryChart = lazy(() => import("@/components/dashboard/HorizontalCategoryChart"));
+const StackedCategoryChart = lazy(() => import("@/components/dashboard/StackedCategoryChart"));
+const PredictionsChart = lazy(() => import("@/components/dashboard/PredictionsChart"));
+const YearlyOverviewChart = lazy(() => import("@/components/dashboard/YearlyOverviewChart"));
+const FinancialHealthGauge = lazy(() => import("@/components/dashboard/FinancialHealthGauge"));
+const InsightsPanel = lazy(() => import("@/components/dashboard/InsightsPanel"));
 
-const insightIcon = {
-  warning: <AlertTriangle className="h-5 w-5 text-warning" />,
-  danger: <XCircle className="h-5 w-5 text-destructive" />,
-  success: <CheckCircle2 className="h-5 w-5 text-success" />,
-  info: <Info className="h-5 w-5 text-primary" />,
-};
-
-const insightBg = {
-  warning: "border-l-warning bg-warning/5",
-  danger: "border-l-destructive bg-destructive/5",
-  success: "border-l-success bg-success/5",
-  info: "border-l-primary bg-primary/5",
-};
+const ChartLoader = () => (
+  <div className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-xl p-6 animate-pulse">
+    <div className="h-4 w-40 rounded bg-muted mb-4" />
+    <div className="h-64 rounded-xl bg-muted/50" />
+  </div>
+);
 
 const Dashboard = () => {
   const { user } = useAuth();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [insights, setInsights] = useState<AIInsight[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) return;
+    setLoading(true);
     Promise.all([incomeApi.getAll(user.id), expenseApi.getAll(user.id)]).then(
       ([inc, exp]) => {
         setIncomes(inc);
         setExpenses(exp);
-        setInsights(insightsApi.generate(inc, exp));
+        setLoading(false);
       }
     );
   }, [user]);
 
-  const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
-  const totalExpenses = expenses.reduce((s, e) => s + e.amount, 0);
-  const balance = totalIncome - totalExpenses;
-  const savingsRate = totalIncome > 0 ? ((balance / totalIncome) * 100).toFixed(1) : "0.0";
+  // Memoize expensive calculations
+  const monthly = useMemo(() => getMonthlyAggregates(incomes, expenses), [incomes, expenses]);
+  const categories = useMemo(() => getCategorySummaries(expenses), [expenses]);
+  const yearly = useMemo(() => getYearlySummary(incomes, expenses), [incomes, expenses]);
+  const health = useMemo(() => getFinancialHealthScore(incomes, expenses), [incomes, expenses]);
+  const currentMonth = useMemo(() => getCurrentMonthStats(incomes, expenses), [incomes, expenses]);
+  const predictions = useMemo(() => getPredictions(incomes, expenses), [incomes, expenses]);
+  const stacked = useMemo(() => getStackedCategoryData(expenses), [expenses]);
+  const insights = useMemo(() => generateInsights(incomes, expenses), [incomes, expenses]);
 
-  // Pie chart data
-  const categoryData = expenses.reduce<Record<string, number>>((acc, e) => {
-    acc[e.category] = (acc[e.category] || 0) + e.amount;
-    return acc;
-  }, {});
-  const pieData = Object.entries(categoryData).map(([name, value]) => ({ name, value }));
-
-  // Monthly bar chart data
-  const monthlyData: Record<string, { income: number; expenses: number }> = {};
-  const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  incomes.forEach((i) => {
-    const m = monthNames[new Date(i.date).getMonth()];
-    if (!monthlyData[m]) monthlyData[m] = { income: 0, expenses: 0 };
-    monthlyData[m].income += i.amount;
-  });
-  expenses.forEach((e) => {
-    const m = monthNames[new Date(e.date).getMonth()];
-    if (!monthlyData[m]) monthlyData[m] = { income: 0, expenses: 0 };
-    monthlyData[m].expenses += e.amount;
-  });
-  const barData = Object.entries(monthlyData).map(([month, d]) => ({ month, ...d }));
-
-  const stats = [
-    { label: "Total Income", value: totalIncome, icon: TrendingUp, color: "text-success" },
-    { label: "Total Expenses", value: totalExpenses, icon: TrendingDown, color: "text-destructive" },
-    { label: "Balance", value: balance, icon: DollarSign, color: "text-primary" },
-    { label: "Savings Rate", value: savingsRate + "%", icon: Percent, color: "text-primary", raw: true },
-  ];
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="space-y-6 animate-pulse">
+          <div className="h-8 w-48 rounded bg-muted" />
+          <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="h-24 rounded-2xl bg-muted/50" />
+            ))}
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <FloatingParticles />
+      <div className="relative z-10 space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">Welcome back, {user?.name}. Here's your financial overview.</p>
+          <p className="text-sm text-muted-foreground">
+            Welcome back, {user?.name}. Here's your premium financial overview.
+          </p>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s) => (
-            <Card key={s.label} className="stat-gradient">
-              <CardContent className="flex items-center gap-4 p-5">
-                <div className={`rounded-xl bg-background p-3 ${s.color}`}>
-                  <s.icon className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{s.label}</p>
-                  <p className="text-xl font-bold text-foreground">
-                    {s.raw ? s.value : `₹${Number(s.value).toLocaleString()}`}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        {/* Animated Stats Grid - 8 cards */}
+        <AnimatedStatCards yearly={yearly} currentMonth={currentMonth} health={health} />
 
-        {/* Charts */}
+        {/* Row 1: Monthly Comparison + Savings Trend */}
         <div className="grid gap-6 lg:grid-cols-2">
-          {/* Expense Breakdown */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Expense Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <PieChart>
-                    <Pie
-                      data={pieData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={4}
-                      dataKey="value"
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    >
-                      {pieData.map((_, i) => (
-                        <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="py-16 text-center text-sm text-muted-foreground">
-                  No expense data yet. Add expenses to see the breakdown.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Monthly Summary */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Monthly Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {barData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={260}>
-                  <BarChart data={barData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                    <XAxis dataKey="month" className="text-xs" />
-                    <YAxis className="text-xs" />
-                    <Tooltip formatter={(v: number) => `₹${v.toLocaleString()}`} />
-                    <Bar dataKey="income" fill="hsl(152, 60%, 40%)" radius={[4, 4, 0, 0]} name="Income" />
-                    <Bar dataKey="expenses" fill="hsl(0, 72%, 51%)" radius={[4, 4, 0, 0]} name="Expenses" />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="py-16 text-center text-sm text-muted-foreground">
-                  No data to display yet. Add income and expenses to see monthly trends.
-                </p>
-              )}
-            </CardContent>
-          </Card>
+          <Suspense fallback={<ChartLoader />}>
+            <MonthlyComparisonChart data={monthly} />
+          </Suspense>
+          <Suspense fallback={<ChartLoader />}>
+            <SavingsTrendChart data={monthly} />
+          </Suspense>
         </div>
 
-        {/* AI CFO Insights */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base">AI CFO Insights</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {insights.map((insight, i) => (
-              <div
-                key={i}
-                className={`flex items-start gap-3 rounded-lg border-l-4 p-4 ${insightBg[insight.type]}`}
-              >
-                {insightIcon[insight.type]}
-                <p className="text-sm text-foreground">{insight.message}</p>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        {/* Row 2: Category Donut + Horizontal Bars */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Suspense fallback={<ChartLoader />}>
+            <CategoryBreakdownChart categories={categories} />
+          </Suspense>
+          <Suspense fallback={<ChartLoader />}>
+            <HorizontalCategoryChart categories={categories} />
+          </Suspense>
+        </div>
+
+        {/* Row 3: Stacked Category + Predictions */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Suspense fallback={<ChartLoader />}>
+            <StackedCategoryChart data={stacked.data} categories={stacked.categories} />
+          </Suspense>
+          <Suspense fallback={<ChartLoader />}>
+            <PredictionsChart predictions={predictions} monthlyData={monthly} />
+          </Suspense>
+        </div>
+
+        {/* Row 4: Yearly Overview + Health Gauge */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Suspense fallback={<ChartLoader />}>
+            <YearlyOverviewChart data={monthly} />
+          </Suspense>
+          <Suspense fallback={<ChartLoader />}>
+            <FinancialHealthGauge health={health} />
+          </Suspense>
+        </div>
+
+        {/* AI Insights Panel */}
+        <Suspense fallback={<ChartLoader />}>
+          <InsightsPanel insights={insights} />
+        </Suspense>
       </div>
     </DashboardLayout>
   );
