@@ -1,6 +1,7 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { incomeApi, expenseApi, type Income, type Expense } from "@/services/api";
+import { routineApi, type ExecutionResult } from "@/services/routineTransactions";
 import {
   getMonthlyAggregates,
   getCategorySummaries,
@@ -14,6 +15,8 @@ import { generateInsights } from "@/services/insights";
 import DashboardLayout from "@/components/DashboardLayout";
 import AnimatedStatCards from "@/components/dashboard/AnimatedStatCards";
 import FloatingParticles from "@/components/dashboard/FloatingParticles";
+import { motion, AnimatePresence } from "framer-motion";
+import { TrendingUp, TrendingDown } from "lucide-react";
 
 // Lazy load heavy chart components
 const MonthlyComparisonChart = lazy(() => import("@/components/dashboard/MonthlyComparisonChart"));
@@ -33,22 +36,65 @@ const ChartLoader = () => (
   </div>
 );
 
+/** Floating alert for auto-executed routine transactions */
+const RoutineAlert = ({ result, onDone }: { result: ExecutionResult; onDone: () => void }) => {
+  const isIncome = result.type === "income";
+  useEffect(() => {
+    const t = setTimeout(onDone, 5000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
+  return (
+    <motion.div
+      initial={{ x: 300, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 300, opacity: 0 }}
+      transition={{ type: "spring", damping: 20 }}
+      className={`flex items-center gap-3 rounded-xl border px-4 py-3 shadow-lg backdrop-blur-md ${
+        isIncome
+          ? "border-success/40 bg-success/10 shadow-success/10"
+          : "border-destructive/40 bg-destructive/10 shadow-destructive/10"
+      }`}
+    >
+      {isIncome ? (
+        <TrendingUp className="h-5 w-5 text-success shrink-0" />
+      ) : (
+        <TrendingDown className="h-5 w-5 text-destructive shrink-0" />
+      )}
+      <p className="text-sm font-medium text-foreground">
+        ₹{result.amount.toLocaleString()} {result.description}{" "}
+        {isIncome ? "auto-credited" : "auto-debited"} successfully.
+      </p>
+    </motion.div>
+  );
+};
+
 const Dashboard = () => {
   const { user } = useAuth();
   const [incomes, setIncomes] = useState<Income[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
+  const [alerts, setAlerts] = useState<(ExecutionResult & { _key: string })[]>([]);
+
+  const removeAlert = useCallback((key: string) => {
+    setAlerts((prev) => prev.filter((a) => a._key !== key));
+  }, []);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    Promise.all([incomeApi.getAll(user.id), expenseApi.getAll(user.id)]).then(
-      ([inc, exp]) => {
-        setIncomes(inc);
-        setExpenses(exp);
-        setLoading(false);
+
+    // Execute due routine transactions, then fetch all data
+    routineApi.executedue(user.id).then((results) => {
+      if (results.length > 0) {
+        setAlerts(results.map((r, i) => ({ ...r, _key: `${r.routineId}-${i}-${Date.now()}` })));
       }
-    );
+      return Promise.all([incomeApi.getAll(user.id), expenseApi.getAll(user.id)] as const);
+    }).then(([inc, exp]) => {
+      setIncomes(inc);
+      setExpenses(exp);
+      setLoading(false);
+    });
   }, [user]);
 
   // Memoize expensive calculations
@@ -79,6 +125,16 @@ const Dashboard = () => {
   return (
     <DashboardLayout>
       <FloatingParticles />
+
+      {/* Routine execution alerts */}
+      <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+        <AnimatePresence>
+          {alerts.map((a) => (
+            <RoutineAlert key={a._key} result={a} onDone={() => removeAlert(a._key)} />
+          ))}
+        </AnimatePresence>
+      </div>
+
       <div className="relative z-10 space-y-6">
         {/* Header */}
         <div>

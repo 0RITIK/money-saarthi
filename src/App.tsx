@@ -12,6 +12,7 @@ import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import AddIncome from "./pages/AddIncome";
 import AddExpense from "./pages/AddExpense";
+import RoutineTransactions from "./pages/RoutineTransactions";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,10 @@ const App = () => (
             <Route
               path="/add-expense"
               element={<ProtectedRoute><AddExpense /></ProtectedRoute>}
+            />
+            <Route
+              path="/routine-transactions"
+              element={<ProtectedRoute><RoutineTransactions /></ProtectedRoute>}
             />
             <Route path="*" element={<NotFound />} />
           </Routes>
