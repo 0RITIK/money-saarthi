@@ -12,6 +12,8 @@ import {
   getFinancialHealthScore,
   getCurrentMonthStats,
   getPredictions,
+  getPeakAnalysis,
+  getQuarterData,
 } from "./analytics";
 
 const MONTH_NAMES = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -329,6 +331,37 @@ export function generateInsights(incomes: Income[], expenses: Expense[]): AIInsi
   }
   if (shrinkingCats.length > 0) {
     insights.push({ type: "success", message: `Declining expenses: ${shrinkingCats.map((c) => c.category).join(", ")} — great cost optimization!` });
+  }
+
+  // ─── PEAK MONTH & QUARTER INSIGHTS (12 templates) ──────────
+
+  const peaks = getPeakAnalysis(incomes, expenses);
+  const quarters = getQuarterData(incomes, expenses);
+
+  if (peaks.peakIncome.value > 0) {
+    insights.push({ type: "success", message: `👑 Your best income month was ${peaks.peakIncome.month} at ${fmt(peaks.peakIncome.value)} — ${peaks.peakIncome.percentAboveAvg.toFixed(1)}% above average.` });
+  }
+  if (peaks.peakExpense.value > 0) {
+    insights.push({ type: "warning", message: `Your highest expense spike was in ${peaks.peakExpense.month} at ${fmt(peaks.peakExpense.value)} — ${peaks.peakExpense.percentAboveAvg.toFixed(1)}% above average.` });
+  }
+  if (peaks.peakSavings.value > 0) {
+    insights.push({ type: "success", message: `🏆 Peak savings month: ${peaks.peakSavings.month} with ${fmt(peaks.peakSavings.value)} saved.` });
+  }
+
+  const bestQuarter = quarters.reduce((a, b) => a.savingsRate > b.savingsRate ? a : b);
+  const worstQuarter = quarters.reduce((a, b) => a.savingsRate < b.savingsRate ? a : b);
+  if (bestQuarter.income > 0) {
+    insights.push({ type: "success", message: `${bestQuarter.quarter} was your strongest quarter with ${bestQuarter.savingsRate.toFixed(1)}% savings rate.` });
+  }
+  if (worstQuarter.income > 0 && bestQuarter.quarter !== worstQuarter.quarter) {
+    insights.push({ type: "warning", message: `${worstQuarter.quarter} had the weakest savings performance at ${worstQuarter.savingsRate.toFixed(1)}%.` });
+  }
+
+  // Q3 trend check
+  const q3 = quarters[2];
+  const q2 = quarters[1];
+  if (q3.income > 0 && q2.income > 0 && q3.savingsRate > q2.savingsRate) {
+    insights.push({ type: "success", message: `Savings trend improved in Q3 compared to Q2 — strong second-half performance.` });
   }
 
   // ─── GENERAL TIPS (always included) ────────────────────────

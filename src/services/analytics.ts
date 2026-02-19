@@ -40,6 +40,26 @@ export interface YearlySummary {
   monthsTracked: number;
 }
 
+export interface PeakMonthInfo {
+  month: string;
+  value: number;
+  percentAboveAvg: number;
+}
+
+export interface PeakAnalysis {
+  peakIncome: PeakMonthInfo;
+  peakExpense: PeakMonthInfo;
+  peakSavings: PeakMonthInfo;
+}
+
+export interface QuarterData {
+  quarter: string;
+  income: number;
+  expenses: number;
+  savings: number;
+  savingsRate: number;
+}
+
 export interface Prediction {
   nextMonthIncome: number;
   nextMonthExpense: number;
@@ -339,4 +359,79 @@ export function getStackedCategoryData(expenses: Expense[]) {
 
   const data = Array.from(months.entries()).map(([month, cats]) => ({ month, ...cats }));
   return { data, categories: Array.from(allCategories) };
+}
+
+// ─── Peak Month Analysis ─────────────────────────────────────
+
+export function getPeakAnalysis(incomes: Income[], expenses: Expense[]): PeakAnalysis {
+  const monthly = getMonthlyAggregates(incomes, expenses);
+  const active = monthly.filter((m) => m.income > 0 || m.expenses > 0);
+
+  const defaultPeak: PeakMonthInfo = { month: "N/A", value: 0, percentAboveAvg: 0 };
+
+  if (active.length === 0) {
+    return { peakIncome: defaultPeak, peakExpense: defaultPeak, peakSavings: defaultPeak };
+  }
+
+  const avgIncome = active.reduce((s, m) => s + m.income, 0) / active.length;
+  const avgExpense = active.reduce((s, m) => s + m.expenses, 0) / active.length;
+  const avgSavings = active.reduce((s, m) => s + m.savings, 0) / active.length;
+
+  const peakIncomeMonth = active.reduce((a, b) => (a.income > b.income ? a : b));
+  const peakExpenseMonth = active.reduce((a, b) => (a.expenses > b.expenses ? a : b));
+  const peakSavingsMonth = active.reduce((a, b) => (a.savings > b.savings ? a : b));
+
+  return {
+    peakIncome: {
+      month: peakIncomeMonth.month,
+      value: peakIncomeMonth.income,
+      percentAboveAvg: avgIncome > 0 ? ((peakIncomeMonth.income - avgIncome) / avgIncome) * 100 : 0,
+    },
+    peakExpense: {
+      month: peakExpenseMonth.month,
+      value: peakExpenseMonth.expenses,
+      percentAboveAvg: avgExpense > 0 ? ((peakExpenseMonth.expenses - avgExpense) / avgExpense) * 100 : 0,
+    },
+    peakSavings: {
+      month: peakSavingsMonth.month,
+      value: peakSavingsMonth.savings,
+      percentAboveAvg: avgSavings > 0 ? ((peakSavingsMonth.savings - avgSavings) / avgSavings) * 100 : 0,
+    },
+  };
+}
+
+// ─── Quarter Analysis ────────────────────────────────────────
+
+export function getQuarterData(incomes: Income[], expenses: Expense[]): QuarterData[] {
+  const quarters: QuarterData[] = [
+    { quarter: "Q1", income: 0, expenses: 0, savings: 0, savingsRate: 0 },
+    { quarter: "Q2", income: 0, expenses: 0, savings: 0, savingsRate: 0 },
+    { quarter: "Q3", income: 0, expenses: 0, savings: 0, savingsRate: 0 },
+    { quarter: "Q4", income: 0, expenses: 0, savings: 0, savingsRate: 0 },
+  ];
+
+  const year = new Date().getFullYear();
+
+  incomes.forEach((i) => {
+    const d = new Date(i.date);
+    if (d.getFullYear() === year) {
+      const qi = Math.floor(d.getMonth() / 3);
+      quarters[qi].income += i.amount;
+    }
+  });
+
+  expenses.forEach((e) => {
+    const d = new Date(e.date);
+    if (d.getFullYear() === year) {
+      const qi = Math.floor(d.getMonth() / 3);
+      quarters[qi].expenses += e.amount;
+    }
+  });
+
+  quarters.forEach((q) => {
+    q.savings = q.income - q.expenses;
+    q.savingsRate = q.income > 0 ? (q.savings / q.income) * 100 : 0;
+  });
+
+  return quarters;
 }
