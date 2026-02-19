@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const AddIncome = () => {
   const { user } = useAuth();
@@ -107,9 +108,14 @@ const AddIncome = () => {
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((inc) => (
                     <div key={inc.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                      <div>
-                        <p className="font-medium text-foreground">{inc.source}</p>
-                        <p className="text-xs text-muted-foreground">{new Date(inc.date).toLocaleDateString()}</p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{inc.source.replace(" [Auto]", "")}</p>
+                          <p className="text-xs text-muted-foreground">{new Date(inc.date).toLocaleDateString()}</p>
+                        </div>
+                        {inc.source.includes("[Auto]") && (
+                          <Badge variant="secondary" className="text-[10px]">Auto Generated</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-success">+₹{inc.amount.toLocaleString()}</span>

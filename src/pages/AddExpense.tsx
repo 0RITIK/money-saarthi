@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Trash2, Plus } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const AddExpense = () => {
   const { user } = useAuth();
@@ -119,9 +120,14 @@ const AddExpense = () => {
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((exp) => (
                     <div key={exp.id} className="flex items-center justify-between rounded-lg border border-border p-3">
-                      <div>
-                        <p className="font-medium text-foreground">{exp.description || exp.category}</p>
-                        <p className="text-xs text-muted-foreground">{exp.category} • {new Date(exp.date).toLocaleDateString()}</p>
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="font-medium text-foreground">{(exp.description || exp.category).replace(" [Auto]", "")}</p>
+                          <p className="text-xs text-muted-foreground">{exp.category} • {new Date(exp.date).toLocaleDateString()}</p>
+                        </div>
+                        {exp.description?.includes("[Auto]") && (
+                          <Badge variant="secondary" className="text-[10px]">Auto Generated</Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-destructive">-₹{exp.amount.toLocaleString()}</span>
