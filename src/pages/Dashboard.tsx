@@ -10,6 +10,8 @@ import {
   getCurrentMonthStats,
   getPredictions,
   getStackedCategoryData,
+  getPeakAnalysis,
+  getQuarterData,
 } from "@/services/analytics";
 import { generateInsights } from "@/services/insights";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -28,6 +30,7 @@ const PredictionsChart = lazy(() => import("@/components/dashboard/PredictionsCh
 const YearlyOverviewChart = lazy(() => import("@/components/dashboard/YearlyOverviewChart"));
 const FinancialHealthGauge = lazy(() => import("@/components/dashboard/FinancialHealthGauge"));
 const InsightsPanel = lazy(() => import("@/components/dashboard/InsightsPanel"));
+const YearComparisonSection = lazy(() => import("@/components/dashboard/YearComparisonSection"));
 
 const ChartLoader = () => (
   <div className="rounded-2xl border border-border/30 bg-card/60 backdrop-blur-xl p-6 animate-pulse">
@@ -106,6 +109,8 @@ const Dashboard = () => {
   const predictions = useMemo(() => getPredictions(incomes, expenses), [incomes, expenses]);
   const stacked = useMemo(() => getStackedCategoryData(expenses), [expenses]);
   const insights = useMemo(() => generateInsights(incomes, expenses), [incomes, expenses]);
+  const peaks = useMemo(() => getPeakAnalysis(incomes, expenses), [incomes, expenses]);
+  const quarters = useMemo(() => getQuarterData(incomes, expenses), [incomes, expenses]);
 
   if (loading) {
     return (
@@ -186,6 +191,11 @@ const Dashboard = () => {
             <FinancialHealthGauge health={health} />
           </Suspense>
         </div>
+
+        {/* Year Comparison & Peak Analysis */}
+        <Suspense fallback={<ChartLoader />}>
+          <YearComparisonSection monthly={monthly} peaks={peaks} quarters={quarters} />
+        </Suspense>
 
         {/* AI Insights Panel */}
         <Suspense fallback={<ChartLoader />}>
