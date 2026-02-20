@@ -6,6 +6,9 @@ import {
   LogOut,
   Home,
   Repeat,
+  CreditCard,
+  Crown,
+  Landmark,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -28,6 +31,9 @@ const navItems = [
   { title: "Add Income", url: "/add-income", icon: TrendingUp },
   { title: "Add Expense", url: "/add-expense", icon: TrendingDown },
   { title: "Routine Transactions", url: "/routine-transactions", icon: Repeat },
+  { title: "Pay Bill", url: "/pay-bill", icon: CreditCard },
+  { title: "Loan Manager", url: "/loan-manager", icon: Landmark },
+  { title: "Upgrade", url: "/upgrade", icon: Crown },
 ];
 
 export function AppSidebar() {

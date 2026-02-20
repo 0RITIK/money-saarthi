@@ -15,6 +15,11 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: "FREE" | "PRO";
+  subscriptionId?: string;
+  subscriptionStartDate?: string;
+  subscriptionExpiryDate?: string;
+  isProActive?: boolean;
 }
 
 export interface Income {
@@ -32,6 +37,13 @@ export interface Expense {
   category: ExpenseCategory;
   description: string;
   date: string;
+  razorpayOrderId?: string;
+  razorpayPaymentId?: string;
+  razorpaySignature?: string;
+  paymentType?: "Bill" | "EMI" | "Subscription" | "Manual";
+  paymentMethod?: "Razorpay" | "Manual";
+  status?: "Pending" | "Completed" | "Failed";
+  isOnlinePayment?: boolean;
 }
 
 export type ExpenseCategory =
@@ -89,11 +101,11 @@ export const authApi = {
     if (users.find((u) => u.email === email)) {
       throw new Error("Email already registered");
     }
-    const user = { id: generateId(), name, email, password };
+    const user = { id: generateId(), name, email, password, role: "FREE" as const };
     users.push(user);
     setStore("cfo_users", users);
     const token = btoa(JSON.stringify({ userId: user.id, exp: Date.now() + 86400000 }));
-    return { user: { id: user.id, name, email }, token };
+    return { user: { id: user.id, name, email, role: "FREE" }, token };
   },
 
   /** Login an existing user */
@@ -103,7 +115,7 @@ export const authApi = {
     const user = users.find((u) => u.email === email && u.password === password);
     if (!user) throw new Error("Invalid email or password");
     const token = btoa(JSON.stringify({ userId: user.id, exp: Date.now() + 86400000 }));
-    return { user: { id: user.id, name: user.name, email: user.email }, token };
+    return { user: { id: user.id, name: user.name, email: user.email, role: user.role || "FREE" }, token };
   },
 
   /** Validate token and return user */
