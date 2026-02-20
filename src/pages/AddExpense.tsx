@@ -128,6 +128,11 @@ const AddExpense = () => {
                         {exp.description?.includes("[Auto]") && (
                           <Badge variant="secondary" className="text-[10px]">Auto Generated</Badge>
                         )}
+                        {exp.description?.includes("[Online]") && (
+                          <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
+                            {exp.paymentType === "EMI" ? "EMI Payment" : exp.paymentType === "Subscription" ? "Subscription" : "Online Payment"}
+                          </Badge>
+                        )}
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="font-semibold text-destructive">-₹{exp.amount.toLocaleString()}</span>
