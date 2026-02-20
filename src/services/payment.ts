@@ -28,6 +28,8 @@ export interface PaymentVerification {
   verified: boolean;
 }
 
+export type LoanStatus = "Active" | "Completed" | "Overdue";
+
 export interface Loan {
   id: string;
   userId: string;
@@ -36,7 +38,12 @@ export interface Loan {
   emiAmount: number;
   remainingAmount: number;
   startDate: string;
+  endDate: string;
   nextDueDate: string;
+  loanDurationMonths: number;
+  totalEMIs: number;
+  completedEMIs: number;
+  loanStatus: LoanStatus;
   isActive: boolean;
   createdAt: string;
 }
@@ -206,12 +213,40 @@ export const subscriptionApi = {
 // ─── Loan / EMI API ───────────────────────────────────────────
 
 export const loanApi = {
+  /** Calculate months between two dates */
+  _calcMonths(start: string, end: string): number {
+    const s = new Date(start);
+    const e = new Date(end);
+    return (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+  },
+
+  /** Determine loan status */
+  _getStatus(loan: Loan): LoanStatus {
+    if (loan.remainingAmount <= 0) return "Completed";
+    if (new Date() > new Date(loan.endDate) && loan.remainingAmount > 0) return "Overdue";
+    return "Active";
+  },
+
+  /** Refresh status on all loans for a user */
+  _refreshStatuses(loans: Loan[]): void {
+    loans.forEach((l) => {
+      l.loanStatus = this._getStatus(l);
+      l.isActive = l.loanStatus === "Active";
+    });
+  },
+
   /** POST /api/loan/create */
   async create(
     userId: string,
-    data: { loanName: string; totalAmount: number; emiAmount: number; startDate: string }
+    data: { loanName: string; totalAmount: number; emiAmount: number; startDate: string; endDate: string }
   ): Promise<Loan> {
     await delay(400);
+    if (new Date(data.endDate) <= new Date(data.startDate)) {
+      throw new Error("End date must be after start date.");
+    }
+
+    const durationMonths = this._calcMonths(data.startDate, data.endDate);
+    const totalEMIs = Math.max(1, durationMonths);
     const nextDue = new Date(data.startDate);
     nextDue.setMonth(nextDue.getMonth() + 1);
 
@@ -223,7 +258,12 @@ export const loanApi = {
       emiAmount: data.emiAmount,
       remainingAmount: data.totalAmount,
       startDate: data.startDate,
+      endDate: data.endDate,
       nextDueDate: nextDue.toISOString().split("T")[0],
+      loanDurationMonths: durationMonths,
+      totalEMIs,
+      completedEMIs: 0,
+      loanStatus: "Active",
       isActive: true,
       createdAt: new Date().toISOString(),
     };
@@ -234,10 +274,13 @@ export const loanApi = {
     return loan;
   },
 
-  /** Get all loans for user */
+  /** Get all loans for user (refreshes statuses) */
   async getAll(userId: string): Promise<Loan[]> {
     await delay(200);
-    return getStore<Loan>("cfo_loans").filter((l) => l.userId === userId);
+    const allLoans = getStore<Loan>("cfo_loans");
+    this._refreshStatuses(allLoans);
+    setStore("cfo_loans", allLoans);
+    return allLoans.filter((l) => l.userId === userId);
   },
 
   /** POST /api/loan/pay-emi */
@@ -245,7 +288,8 @@ export const loanApi = {
     const loans = getStore<Loan>("cfo_loans");
     const loan = loans.find((l) => l.id === loanId && l.userId === userId);
     if (!loan) throw new Error("Loan not found");
-    if (!loan.isActive) throw new Error("Loan is already fully paid");
+    if (!loan.isActive && loan.loanStatus !== "Overdue") throw new Error("Loan is already fully paid");
+    if (new Date() > new Date(loan.endDate) && loan.remainingAmount <= 0) throw new Error("Loan is completed.");
 
     const order = await paymentApi.createOrder(loan.emiAmount, `EMI – ${loan.loanName}`);
     const verification = await paymentApi.verifyPayment(order.id);
@@ -254,10 +298,12 @@ export const loanApi = {
 
     // Update loan
     loan.remainingAmount = Math.max(0, loan.remainingAmount - loan.emiAmount);
+    loan.completedEMIs = (loan.completedEMIs || 0) + 1;
     const nextDue = new Date(loan.nextDueDate);
     nextDue.setMonth(nextDue.getMonth() + 1);
     loan.nextDueDate = nextDue.toISOString().split("T")[0];
-    if (loan.remainingAmount <= 0) loan.isActive = false;
+    loan.loanStatus = this._getStatus(loan);
+    loan.isActive = loan.loanStatus === "Active";
 
     setStore("cfo_loans", loans);
 
