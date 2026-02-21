@@ -16,6 +16,7 @@ import RoutineTransactions from "./pages/RoutineTransactions";
 import PayBill from "./pages/PayBill";
 import Upgrade from "./pages/Upgrade";
 import LoanManager from "./pages/LoanManager";
+import ExpensePlanner from "./pages/ExpensePlanner";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,10 @@ const App = () => (
             <Route
               path="/loan-manager"
               element={<ProtectedRoute><LoanManager /></ProtectedRoute>}
+            />
+            <Route
+              path="/expense-planner"
+              element={<ProtectedRoute><ExpensePlanner /></ProtectedRoute>}
             />
             <Route path="*" element={<NotFound />} />
           </Routes>

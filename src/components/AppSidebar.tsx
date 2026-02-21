@@ -9,6 +9,7 @@ import {
   CreditCard,
   Crown,
   Landmark,
+  Calculator,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
@@ -33,6 +34,7 @@ const navItems = [
   { title: "Routine Transactions", url: "/routine-transactions", icon: Repeat },
   { title: "Pay Bill", url: "/pay-bill", icon: CreditCard },
   { title: "Loan Manager", url: "/loan-manager", icon: Landmark },
+  { title: "Smart Planner", url: "/expense-planner", icon: Calculator },
   { title: "Upgrade", url: "/upgrade", icon: Crown },
 ];
 
